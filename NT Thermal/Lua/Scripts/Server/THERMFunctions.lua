@@ -206,6 +206,8 @@ THERM.CalculateTemperature = function (limbwet,target,limb)
                 CharacterTable.LastStoredTorsoTemp = HF.GetAfflictionStrengthLimb(target, LimbType.Torso, "temperature", 0)
         end
         THERM.SetCharacterTablePressure(target,CharacterTable)
+        HypothermiaLevel = NTConfig.Get("NewHypothermiaLevel", 36)
+        HyperthermiaLevel = NTConfig.Get("NewHyperthermiaLevel", 39)
         local LimbClothResistance = THERM.ClothResistance(limb,target)
         local LimbTempResistance = THERM.LimbTempResistance(limb)
         -- Parameters that affect temperature calculations.
@@ -216,6 +218,18 @@ THERM.CalculateTemperature = function (limbwet,target,limb)
         local Water = CharacterTable.LimbWaterValues[WaterLimbKey] * -1
         local RoomTemp = 0
         local OnFire = CharacterTable.OnFire[limb]
+        local BloodLoss = function ()
+                if HF.GetAfflictionStrengthLimb(target, limb, "temperature", 0) > HypothermiaLevel then
+                        return HF.GetAfflictionStrength(target, "bloodloss", 0)/400
+                end
+                return 0 
+        end
+        local Sepsis = function ()
+                if HF.GetAfflictionStrengthLimb(target, limb, "temperature", 0) < HyperthermiaLevel then
+                        return HF.GetAfflictionStrength(target, "sepsis", 0)/200
+                end
+                return 0 
+        end
         CharacterTable.OnFire[limb] = 1
         if target.CurrentHull ~= nil and THERMRoom.GetRoom(target.CurrentHull) ~= nil and THERMRoom.Rooms ~= nil and THERMRoom.Intiated then
                 RoomTemp = THERMRoom.GetRoom(target.CurrentHull).Temp/THERMRoom.DefaultRoomTemp * 2 -- Scaling
@@ -224,7 +238,7 @@ THERM.CalculateTemperature = function (limbwet,target,limb)
                 THERM.MakeLimbWet(target,limb,Water,false)
         end
         -- Heat Calculation
-        local Heat = HF.Clamp(RoomTemp - 1,0,10)
+        local Heat = HF.Clamp(RoomTemp - 1,0,10) + Sepsis()
                 * (HF.BoolToNum(THERM.IsLimbCyber(target,limb),1) + 1)
                 / 10 -- Scaling feature
                 * OnFire
@@ -232,7 +246,7 @@ THERM.CalculateTemperature = function (limbwet,target,limb)
                 /LimbTempResistance
                 * NTConfig.Get("ETempScaling", 1.5)
                 * NT.Deltatime
-        local Cold = ((((Water) 
+        local Cold = ((((Water - BloodLoss()) 
                 * WaterMultipliers)
                 /LimbClothResistance)
                 /LimbTempResistance) 

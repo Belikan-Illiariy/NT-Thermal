@@ -210,9 +210,9 @@ NTTHERM.UpdateLimbAfflictions = {
 						end
 						if type == LimbType.Head then
 							if limbaff[i].strength < HypothermiaLevel then
-								HF.SetAffliction(c.character, "overlay_ice", HF.Clamp(5/limbaff[i].strength*100,0,40))
+								HF.SetAffliction(c.character, "overlay_ice", HF.Clamp(5/limbaff[i].strength*150,0,60))
 							elseif limbaff[i].strength > HyperthermiaLevel then
-								HF.SetAffliction(c.character, "overlay_fire", HF.Clamp(limbaff[i].strength/NormalBodyTemp*50,0,80))
+								HF.SetAffliction(c.character, "overlay_fire", HF.Clamp(limbaff[i].strength/NormalBodyTemp*50,0,100))
 							else
 								HF.SetAffliction(c.character, "overlay_ice", 0)
 								HF.SetAffliction(c.character, "overlay_fire", 0)
@@ -651,7 +651,6 @@ NTTHERM.UpdateAfflictions = {
 				if TorsoTemp < HypothermiaLevel/NTTHERM.ExtremeHypothermiaScaling/2 then
 					NTC.SetSymptomTrue(c.character, "triggersym_respiratoryarrest", 2)
 					c.afflictions.immunity.strength = c.afflictions.immunity.strength - (.5 * NT.Deltatime)
-					NTC.SetSymptomTrue(c.character, "sym_unconsciousness", 2)
 				end
 				if TorsoTemp < HypothermiaLevel/NTTHERM.ExtremeHypothermiaScaling/1.5 then
 					c.afflictions.bloodpressure.strength = c.afflictions.bloodpressure.strength + (.1 * NT.Deltatime)
@@ -660,6 +659,11 @@ NTTHERM.UpdateAfflictions = {
 						* c.afflictions.lungdamage.strength/50
 						* NT.Deltatime)
 					NTC.SetSymptomTrue(c.character, "sym_paleskin", 5)
+					NTC.SetSymptomTrue(c.character, "sym_unconsciousness", 2)
+				end
+				if TorsoTemp < HypothermiaLevel/NTTHERM.ExtremeHypothermiaScaling then
+					c.afflictions.bloodpressure.strength = c.afflictions.bloodpressure.strength + (.05 * NT.Deltatime)
+					NTC.SetSymptomTrue(c.character, "hypoventilation", 2)
 				end
 				if  HF.GetAfflictionStrength(c.character, "temperature", 0) > HypothermiaLevel then
 					c.afflictions.hypothermia.strength = 0
@@ -880,6 +884,7 @@ NTTHERM.UpdateAfflictions = {
 			end
 			local DivingSuit = c.character.Inventory.GetItemInLimbSlot(InvSlotType.OuterClothes)
 			local Bag = c.character.Inventory.GetItemInLimbSlot(InvSlotType.Bag)
+			local BatteryConsumption = .3 * NT.Deltatime
 			if c.character.Inventory.GetItemInLimbSlot(InvSlotType.OuterClothes) ~= nil and (c.character.Inventory.GetItemInLimbSlot(InvSlotType.OuterClothes).HasTag("diving") or c.character.Inventory.GetItemInLimbSlot(InvSlotType.OuterClothes).HasTag("deepdivinglarge")) then
 				-- Internal Heater Check
 				local Index = IndexedSuits[tostring(DivingSuit.Prefab.Identifier)] or IndexedSuits[tostring(DivingSuit.Prefab.VariantOf)] or 1
@@ -891,7 +896,7 @@ NTTHERM.UpdateAfflictions = {
 				if (DivingSuit.HasTag("thermal") or (Index ~= 1 and DivingSuit.Prefab.VariantOf.HasTag("thermal"))) and DivingSuit.OwnInventory.GetItemAt(Index) ~= nil and DivingSuit.OwnInventory.GetItemAt(Index).Condition > 1 then
 					local BatteryCell = c.character.Inventory.GetItemInLimbSlot(InvSlotType.OuterClothes).OwnInventory.GetItemAt(Index)
 					if BatteryCell.Condition > 1 then
-						BatteryCell.Condition = BatteryCell.Condition - .2 * NT.Deltatime
+						BatteryCell.Condition = BatteryCell.Condition - BatteryConsumption
 						c.afflictions[i].strength = c.afflictions[i].strength + (5 * NT.Deltatime)
 						return
 					end
@@ -901,7 +906,7 @@ NTTHERM.UpdateAfflictions = {
 				elseif Bag ~= nil and Bag.Prefab.Identifier == "esh" and Bag.OwnInventory.GetItemAt(0) ~= nil and Bag.OwnInventory.GetItemAt(0).Condition > 1 then
 					local BatteryCell = Bag.OwnInventory.GetItemAt(0)
 					if BatteryCell ~= nil and BatteryCell.Condition > 1 then
-						BatteryCell.Condition = BatteryCell.Condition - .2 * NT.Deltatime
+						BatteryCell.Condition = BatteryCell.Condition - BatteryConsumption
 						c.afflictions[i].strength = c.afflictions[i].strength + (5 * NT.Deltatime)
 						return
 					end
@@ -932,13 +937,13 @@ NTTHERM.UpdateAfflictions = {
 					return
 				elseif DivingSuit.OwnInventory ~= nil and DivingSuit.OwnInventory.GetItemAt(0) ~= nil and DivingSuit.OwnInventory.GetItemAt(0).Condition > 1 then
 					local BatteryCell = DivingSuit.OwnInventory.GetItemAt(0)
-					BatteryCell.Condition = BatteryCell.Condition - .2 * NT.Deltatime
+					BatteryCell.Condition = BatteryCell.Condition - BatteryConsumption
 					c.afflictions[i].strength = c.afflictions[i].strength + (5 * NT.Deltatime)
 					return
 				elseif Bag ~= nil and Bag.Prefab.Identifier == "esh" and Bag.OwnInventory.GetItemAt(0) ~= nil and Bag.OwnInventory.GetItemAt(0).Condition > 1 then
 					local BatteryCell = Bag.OwnInventory.GetItemAt(0)
 					if BatteryCell ~= nil and BatteryCell.Condition > 1 then
-						BatteryCell.Condition = BatteryCell.Condition - .2 * NT.Deltatime
+						BatteryCell.Condition = BatteryCell.Condition - BatteryConsumption
 						c.afflictions[i].strength = c.afflictions[i].strength + (5 * NT.Deltatime)
 						return
 					end
